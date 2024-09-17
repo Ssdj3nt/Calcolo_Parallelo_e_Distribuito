@@ -49,7 +49,7 @@ void printMatrix(int **Matrix, int N, int M) {
 void printResMatrix(int **Matrix, int N, int M) {
     for (size_t i = 0; i < N; i++) {
         for (size_t j = 0; j < M; j++) {
-            printf("%4d",Matrix[i][j]);
+            printf("%6d",Matrix[i][j]);
         }
         printf("\n");
     }
@@ -60,13 +60,14 @@ int main(void) {
     int **A,**resultMatrix;
     int num_core = omp_get_num_procs();
     int M = num_core * 2;
+    int blockSize = M / num_core;
 
     srand(time(NULL));
 
     printf("\nNumero core: %d\n",num_core);
 
     allocateMatrix(&A,M,M);
-    allocateMatrix(&resultMatrix,M/num_core,M/num_core);
+    allocateMatrix(&resultMatrix,blockSize,blockSize);
 
     fillMatrix(A,M,M);
 
@@ -76,20 +77,26 @@ int main(void) {
         printMatrix(A,M,M);
     }
 
-    #pragma omp parallel shared(A,M,num_core,resultMatrix)
+    omp_set_num_threads(num_core * num_core);
+
+    #pragma omp parallel shared(A,M,num_core,resultMatrix,blockSize)
     {
         int **subMatrix;
         int thread_id = omp_get_thread_num();
 
-        allocateMatrix(&subMatrix,M/num_core,M/num_core);
+        allocateMatrix(&subMatrix,blockSize,blockSize);
 
         printf("\n(Core %d)\n",thread_id);
 
-        int row_start = (thread_id / 4) * 2;
-        int col_start = (thread_id % 4) * 2;
+        int num_blocks_per_row = M / blockSize;
 
-        for (int i = row_start; i < row_start + 2; i++) {
-            for (int j = col_start; j < col_start + 2; j++) {
+        int blockRow = thread_id / num_blocks_per_row;
+        int blockCol = thread_id % num_blocks_per_row;
+        int row_start = blockRow * blockSize;
+        int col_start = blockCol * blockSize;
+
+        for (int i = row_start; i < row_start + blockSize; i++) {
+            for (int j = col_start; j < col_start + blockSize; j++) {
                 subMatrix[i - row_start][j - col_start] = A[i][j];
 
                 #pragma omp atomic
@@ -98,21 +105,21 @@ int main(void) {
             }
         }
 
-        for (size_t i = 0; i < M/num_core; i++) {
-            for (size_t j = 0; j < M/num_core; j++) {
+        for (size_t i = 0; i < blockSize; i++) {
+            for (size_t j = 0; j < blockSize; j++) {
                 printf("%3d",subMatrix[i][j]);
             }
             printf("\n");
         }
 
-        deallocateMatrix(subMatrix,M/num_core);
+        deallocateMatrix(subMatrix,blockSize);
     }
 
     printf("\nMatrice risultato:\n");
-    printResMatrix(resultMatrix,M/num_core,M/num_core);
+    printResMatrix(resultMatrix,blockSize,blockSize);
 
     deallocateMatrix(A,M);
-    deallocateMatrix(resultMatrix,M/num_core);
+    deallocateMatrix(resultMatrix,blockSize);
 
     return 0;
 }
