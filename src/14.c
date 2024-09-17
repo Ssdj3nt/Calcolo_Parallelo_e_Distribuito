@@ -1,3 +1,15 @@
+/* 
+Implementare un programma parallelo per
+l’ambiente multicore con np×np unità processanti che
+impieghi la libreria OpenMP. Il programma deve essere
+organizzato come segue: il core master deve leggere
+una matrice A di dimensione M×M. Quindi, ogni core
+deve estrarre un blocco della matrice A di dimensione
+(M/np)×(M/np), conservando i valori in np×np matrici.
+Infine, i core devono collaborare per calcolare la
+somma di tali matrici.
+*/
+
 #include <stdio.h>
 #include <omp.h>
 #include <time.h>
