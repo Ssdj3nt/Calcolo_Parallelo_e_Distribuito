@@ -1,4 +1,5 @@
-/* Implementare un programma parallelo per l’ambiente
+/* 
+Implementare un programma parallelo per l’ambiente
 multicore con np unità processanti che impieghi la
 libreria OpenMP. Il programma deve essere
 organizzato come segue: il core master deve generare una matrice di dim N×N, ogni core deve
