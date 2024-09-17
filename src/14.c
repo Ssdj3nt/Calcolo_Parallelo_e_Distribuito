@@ -1,4 +1,4 @@
-/* 
+/*
 Implementare un programma parallelo per
 l’ambiente multicore con np×np unità processanti che
 impieghi la libreria OpenMP. Il programma deve essere
@@ -79,7 +79,7 @@ int main(void) {
 
     omp_set_num_threads(num_core * num_core);
 
-    #pragma omp parallel shared(A,M,num_core,resultMatrix,blockSize)
+    #pragma omp parallel shared(A,M,resultMatrix,blockSize)
     {
         int **subMatrix;
         int thread_id = omp_get_thread_num();
