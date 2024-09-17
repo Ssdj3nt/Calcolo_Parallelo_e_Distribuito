@@ -18,7 +18,7 @@ somma di tali matrici.
 void fillMatrix(int **Matrix, int N, int M) {
     for (size_t i = 0; i < N; i++) {
         for (size_t j = 0; j < M; j++) {
-            Matrix[i][j] = rand() % 100;
+            Matrix[i][j] = 1;
         }
     }
 }
