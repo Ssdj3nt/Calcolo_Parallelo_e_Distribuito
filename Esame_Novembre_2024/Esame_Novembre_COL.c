@@ -1,11 +1,12 @@
-//il core master deve generare una matrice A di NXM
-//ogni core deve estrarre un bocco colonna dalla matrice generata e conservarlo in una sottomatrice locale A_LOC_I, i=0,...,np-1;
-//i core devono collabborare per effettuare, in parallelo, il prodotto puntuale tra le sottomatrici locali A_loc_i ottenute.
-//infine il core master deve stampare il risultato finale ed tempo di esecuzione
+/* 
+1) Il core master deve generare una matrice A di NXM.
+2) Ogni core deve estrarre un blocco colonna dalla matrice generata e conservarlo in una sottomatrice locale A_LOC_I, i=0,...,np-1.
+3) I core devono collabborare per effettuare, in parallelo, il prodotto puntuale tra le sottomatrici locali A_loc_i ottenute.
+4) Infine il core master deve stampare il risultato finale ed tempo di esecuzione. */
 
 #include "stdio.h"
-#include "omp.h"
 #include "stdlib.h"
+#include "omp.h"
 #include "time.h"
 
 void allocateMatrix(int ***matrix, size_t n, size_t m) {
@@ -63,71 +64,79 @@ void fillVector(unsigned long *vector, size_t m) {
 int main() {
     srand(time(NULL));
     int **matrix, N, M, np;
-    unsigned long *vector, res = 0;
+    unsigned long *resVector , res = 0;
     double start_time = 0, end_time = 0;
 
-    printf("\nN:\n");
+    printf("\nDefinisci le righe della matrice:\n");
     scanf("%d", &N);
-    printf("\nM:\n");
+    printf("\nDefinisci le colonne della matrice:\n");
     scanf("%d", &M);
-    printf("\nNp:\n");
+    printf("\nDefinisci il numero di core da utilizzare:\n");
     scanf("%d", &np);
-    
-    allocateMatrix(&matrix, N, M);
-    allocateVector(&vector, N);
-    fillMatrix(matrix, N, M);
-    fillVector(vector,N);
-    
-    printf("\nMatrice:\n");
-    printMatrix(matrix, N, M);
-
-    start_time = omp_get_wtime();
-    
-    #pragma omp parallel num_threads(np) reduction(*:vector[:N])
-    {
-        int id = omp_get_thread_num();
-        unsigned long *A_loc_i;
-        allocateVector(&A_loc_i, N);
-        
-        int startCol = id * (M / np) + (id < M % np ? id : M % np);
-        int endCol = startCol + (M / np) + (id < M % np ? 1 : 0) - 1;
-        
-        for (size_t j = startCol; j <= endCol; j++) {
-            for (size_t i = 0; i < N; i++) {
-                A_loc_i[i] = matrix[i][j];
-            }
-
-            #pragma omp critical
-            {
-                printf("\nCore:%d, Colonna %d:\n", id, j);
-                printVector(A_loc_i, N);
-                printf("\n");
-            }
-            
-        for(size_t k = 0; k < N; k++) {
-         vector[k] *= A_loc_i[k];
-         }
-         
-        }
-        deallocateVector(A_loc_i);
-    }
-    
-    #pragma omp parallel for num_threads(np) reduction(+:res)
-    for(size_t i = 0; i < N; i++){
-     res += vector[i];
-    }
-    
-    end_time = omp_get_wtime();
+    printf("\n");
     
     #pragma omp master
     {
-        printf("\nRESVECTOR:\n");
-        printVector(vector, N);
-        printf("\nRisultato finale: %lu\n", res);
-        printf("\nTempo impiegato: %lf secondi\n\n", end_time - start_time);
+        allocateMatrix(&matrix, N, M);
+        fillMatrix(matrix, N, M);
+        printf("\nMatrice\n");
+        printMatrix(matrix, N, M);
     }
     
-    deallocateVector(vector);
-    deallocateMatrix(matrix, N);
+    allocateVector(&resVector, N);
+    fillVector(resVector, N);
+
+    start_time = omp_get_wtime();
+
+#pragma omp parallel num_threads(np) shared(matrix, N, M) reduction(*:resVector[:N])
+{
+    int M_loc = M / np;
+    int remainder = M % np;
+    int id = omp_get_thread_num();
+    int step = 0;
+    
+    unsigned long *A_loc_i;
+    allocateVector(&A_loc_i, M);
+    
+    if(id < remainder) {
+      M_loc ++;
+    }
+    else {
+      step = remainder;
+    }
+    
+    for (size_t j = 0; j < M_loc; j++) {
+        for (size_t i = 0; i < N; i++) {
+            A_loc_i[i] = matrix[i][j + M_loc * id + step];
+            resVector[i] *= A_loc_i[i];
+        }
+        
+          #pragma omp critical
+            {
+                printf("\nCore: %d\n", id);
+                printVector(A_loc_i, N);
+                printf("\n");
+            }
+    }
+    
+  deallocateVector(A_loc_i);
 }
 
+    #pragma omp parallel for num_threads(np) reduction(+:res)
+    for (size_t i = 0; i < N; i++) {
+        res += resVector[i];
+    }
+
+    end_time = omp_get_wtime();
+
+    #pragma omp master
+    {
+        printf("\nVettore Prodotti:\n");
+        printVector(resVector, N);
+        printf("\nSomma Prodotti: %lu\n", res);
+        printf("\nTempo impiegato: %lf secondi\n\n", end_time - start_time);
+    }
+
+    deallocateMatrix(matrix, N);
+    deallocateVector(resVector);
+}
