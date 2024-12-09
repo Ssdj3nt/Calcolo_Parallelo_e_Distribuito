@@ -110,6 +110,12 @@ int main() {
             A_loc_i[j] = matrix[i + N_loc * id + step][j];
             resVector[j] *= A_loc_i[j];
         }
+        #pragma omp critical
+            {
+                printf("\nCore: %d\n", id);
+                printVector(A_loc_i, M);
+                printf("\n");
+            }
     }
     
   deallocateVector(A_loc_i);
