@@ -98,7 +98,7 @@ int main() {
    start_time = omp_get_wtime();
        
    // Calcolo del prodotto matrice-vettore in parallelo, 2a strategia.
-   #pragma omp parallel for shared(Matrice, Vettore) num_threads(np) reduction(+:Risultato[:N])
+   #pragma omp parallel for shared(Matrice, Vettore) num_threads(np) reduction(+:Risultato[:M])
       for (size_t j = 0; j < M; j++) {
          for (size_t i = 0; i < N; i++) {
             Risultato[i] += Matrice[i][j] * Vettore[j];
